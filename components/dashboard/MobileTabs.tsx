@@ -2,16 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, Home, LifeBuoy, Lock, Settings, TrendingUp, UploadCloud } from 'lucide-react'
+import { BarChart3, CreditCard, Home, LifeBuoy, Lock, Settings, UploadCloud } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useArtistSession } from '@/components/dashboard/SessionProvider'
 
 const TABS = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/dashboard/upload', label: 'Upload', icon: UploadCloud },
+  { href: '/pricing', label: 'Pricing', icon: CreditCard },
   { href: '/dashboard/status', label: 'Status', icon: BarChart3 },
   { href: '/dashboard/support', label: 'Support', icon: LifeBuoy },
-  { href: '/dashboard/analytics', label: 'Stats', icon: TrendingUp },
   { href: '/dashboard/settings', label: 'More', icon: Settings },
 ]
 

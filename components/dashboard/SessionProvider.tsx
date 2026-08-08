@@ -36,11 +36,13 @@ export function DashboardSessionProvider({ children }: { children: ReactNode }) 
   const [artist, setArtist] = useState<ArtistSession | null | undefined>(undefined)
   const [uploadAccess, setUploadAccess] = useState<UploadAccessState | null>(null)
 
+  const artistId = artist?.id
+
   const refreshUploadAccess = useCallback(async () => {
-    if (!artist?.id) return
-    const response = await fetch(`/api/artist-access?artist_id=${artist.id}`)
+    if (!artistId) return
+    const response = await fetch(`/api/artist-access?artist_id=${artistId}`)
     if (response.ok) setUploadAccess(await response.json())
-  }, [artist?.id])
+  }, [artistId])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -142,15 +144,22 @@ export function DashboardSessionProvider({ children }: { children: ReactNode }) 
   // Access may be changed by an admin in another session. Keep the lock state
   // in sync without asking the artist to reload the dashboard.
   useEffect(() => {
-    void refreshUploadAccess()
-    const interval = window.setInterval(() => void refreshUploadAccess(), 5000)
-    const onFocus = () => void refreshUploadAccess()
+    if (!artistId) return
+    let active = true
+    const checkAccess = async () => {
+      const response = await fetch(`/api/artist-access?artist_id=${artistId}`)
+      if (response.ok && active) setUploadAccess(await response.json())
+    }
+    void checkAccess()
+    const interval = window.setInterval(() => void checkAccess(), 5000)
+    const onFocus = () => void checkAccess()
     window.addEventListener('focus', onFocus)
     return () => {
+      active = false
       window.clearInterval(interval)
       window.removeEventListener('focus', onFocus)
     }
-  }, [refreshUploadAccess])
+  }, [artistId])
 
   const signOut = useCallback(() => {
     const supabase = getSupabaseBrowserClient()

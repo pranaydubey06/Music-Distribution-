@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   BarChart3,
   Bell,
+  CreditCard,
   Home,
   LifeBuoy,
   Lock,
@@ -18,6 +19,7 @@ import { useArtistSession } from '@/components/dashboard/SessionProvider'
 const NAV_TABS = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/dashboard/upload', label: 'Upload', icon: UploadCloud },
+  { href: '/pricing', label: 'Pricing', icon: CreditCard },
   { href: '/dashboard/status', label: 'Status', icon: BarChart3 },
   { href: '/dashboard/support', label: 'Support', icon: LifeBuoy },
   { href: '/dashboard/analytics', label: 'Analytics', icon: TrendingUp },

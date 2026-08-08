@@ -1,8 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ArtistAccess, UploadAccessState } from '@/lib/types'
-
-type AccessClient = {
-  from: (table: string) => any
-}
 
 /** Date-only comparisons avoid time-zone changes locking an artist early. */
 export function isAccessActive(access: ArtistAccess | null | undefined): boolean {
@@ -12,7 +9,7 @@ export function isAccessActive(access: ArtistAccess | null | undefined): boolean
 }
 
 export async function getArtistAccessState(
-  supabase: AccessClient,
+  supabase: SupabaseClient,
   artistId: string
 ): Promise<UploadAccessState> {
   const { data, error } = await supabase
@@ -28,3 +25,4 @@ export async function getArtistAccessState(
   const expired = Boolean(access?.upload_access && access.expiry_date && !isAccessActive(access))
   return { active: isAccessActive(access), expired, access }
 }
+

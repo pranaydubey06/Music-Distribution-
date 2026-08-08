@@ -36,6 +36,20 @@ export interface UploadAccessState {
   access: ArtistAccess | null
 }
 
+export interface PaymentRecord {
+  id: string
+  user_id: string | null
+  artist_id: string
+  plan_name: AccessPlanName
+  amount: number
+  payment_id: string
+  payment_status: string
+  purchase_date: string
+  start_date: string
+  expiry_date: string | null
+  created_at: string
+}
+
 export type ReleaseType = 'Single' | 'EP' | 'Album'
 
 export type ReleaseStatus =
