@@ -1,6 +1,0 @@
-{
-  "name": "Spilrix Distribution",
-  "description": "Spilrix Distribution — independent release distribution for serious artists. Submit, track, and manage your catalog.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
