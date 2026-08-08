@@ -1,7 +1,7 @@
 # Spilrix Distribution
 
-A premium, minimalist artist-submission portal. No email/password registration —
-artists identify themselves with just a name and (optional) photo, then submit
+A premium, minimalist artist-submission portal. Artists register with email
+and password (Supabase Auth, with email verification), then submit
 Singles/EPs/Albums for review. Admins triage everything from a hidden control
 room at `/spilrix-admin`, track releases through to "Live," and hand off files
 for manual upload to streaming platforms.
@@ -36,26 +36,37 @@ Each script is safe to run on a database with real data already in it.
 ```
 Browser (anon key)              Server (service role key)
 ─────────────────────           ──────────────────────────
+Supabase Auth (email+password) ─▶ Verified on every API call:
+  session JWT attached to            supabase.auth.getUser(token) resolves
+  every fetch('/api/...')            the token to a user, then to the one
+                                      artist row that user owns.
+
 Direct-to-Storage uploads  ──▶  Supabase Storage buckets
                                  ('profiles', 'songs', 'covers' — public
                                   read, open insert, no update/delete)
 
 fetch('/api/...')           ──▶  Route Handlers (/app/api/**)
-                                 → Supabase tables via service role
-                                   (RLS denies anon entirely)
+                                 → requireArtist()/requireUser() verify the
+                                   Bearer token, then all Supabase table
+                                   reads/writes happen server-side via the
+                                   service role key (RLS denies anon and
+                                   authenticated entirely — see below)
 
-localStorage ('spilrix_session')      sessionStorage ('spilrix_admin_passcode')
-  → "who is the logged-in artist"       → admin gate, checked server-side
+sessionStorage ('spilrix_admin_passcode')
+  → admin gate, checked server-side on every /api/admin/** call
 ```
 
 **Why route DB access through API routes instead of letting the browser talk
-to Supabase tables directly?** With no password-based auth, there's no
-`auth.uid()` to write Row Level Security policies against. Rather than open
-the tables up to the anon key (which any visitor could call from devtools),
-every table read/write goes through a Route Handler using the **service
-role** key, which never reaches the browser. `artists`, `releases`, `tracks`,
-and `tickets` keep RLS *enabled with zero policies* — fully locked to anon
-and authenticated roles, accessible only server-side. The Storage buckets are
+to Supabase tables directly?** Rather than write per-table RLS policies
+against `auth.uid()` and open the tables up to the anon/authenticated keys
+(which any visitor could call from devtools), every table read/write goes
+through a Route Handler using the **service role** key, which never reaches
+the browser. The route handler independently re-derives the caller's identity
+from their Supabase session token (`requireArtist`/`requireUser` in
+`lib/api-auth.ts`) — a browser can never simply claim an `artist_id` in a
+request and have it trusted. `artists`, `releases`, `tracks`, and `tickets`
+keep RLS *enabled with zero policies* — fully locked to anon and
+authenticated roles, accessible only server-side. The Storage buckets are
 the exception: file uploads happen directly from the browser to avoid
 Vercel's request-body size limits, so they do need an anon-accessible insert
 policy (see the security notes below).
@@ -191,7 +202,7 @@ lib/
 ├── process-scheduled-deletions.ts Finds + permanently deletes overdue releases
 ├── browser-storage.ts             Notifying localStorage/sessionStorage helpers
 ├── use-browser-storage-value.ts   useSyncExternalStore-based read hook
-├── session.ts                     Artist session save/get/clear
+├── session.ts                     Legacy pre-auth session cleanup (clearSession) + ArtistSession type
 ├── admin-auth.ts                  Passcode header check for /api/admin/**
 ├── types.ts                       Artist / Release / Track / Ticket types
 └── utils.ts                       cn, dates, slugify, getDaysUntil, formatBytes
@@ -310,31 +321,33 @@ Sign out.
 
 ## Security notes — read this before going to production
 
-This app intentionally has **no real authentication system**, per the brief.
-That trade-off has real consequences worth knowing:
+Artist identity is backed by real **Supabase Auth** (email + password, with
+email verification). Every artist-scoped API route re-derives the caller's
+identity server-side from their session token — a browser can never simply
+claim someone else's `artist_id` and have it trusted (see `requireArtist`
+in `lib/api-auth.ts`). A few trade-offs are still worth knowing before you
+launch publicly:
 
-- **Artist identity is just a name.** Nothing stops two people from typing
-  the same artist name, or from reading another artist's Status tab if they
-  know (or guess) that artist's `id`. There's no password tying a browser to
-  an identity — `localStorage` just remembers "who I said I was."
 - **`/spilrix-admin` is hidden, not authenticated** in the traditional sense.
   The passcode check happens server-side (`ADMIN_PASSCODE` is never sent to
   the browser bundle), which is meaningfully better than a client-only check
-  — but it's still a single shared secret with no audit trail, rate limiting,
-  or per-admin accountability.
-- **Storage uploads are open to anyone** who can reach `/`. The `profiles`,
-  `songs`, and `covers` buckets accept inserts from any visitor (no
-  update/delete), which is what makes "no signup, just upload" possible —
-  but it also means someone could script uploads directly against your
-  Supabase Storage API, bypassing the UI.
-
-**If this ever needs to be hardened**, the natural next step is swapping the
-name-only gateway for real [Supabase Auth](https://supabase.com/docs/guides/auth)
-(magic links work well if you still want to avoid traditional passwords),
-then writing RLS policies against `auth.uid()` instead of routing everything
-through the service role. The API route structure here would barely change —
-you'd mostly be replacing the passcode/localStorage checks with real session
-checks.
+  — but it's still a single shared secret with no audit trail, per-admin
+  accountability, or rate limiting on login attempts. If more than one person
+  needs admin access, consider swapping this for real per-user auth.
+- **Storage uploads are open to anyone** who can reach the site. The
+  `profiles`, `songs`, and `covers` buckets accept inserts from any visitor,
+  signed in or not (no update/delete), which is what keeps direct-to-storage
+  uploads simple and avoids Vercel's request body size limits — but it also
+  means someone could script uploads directly against your Supabase Storage
+  API, bypassing the app entirely and the app's own file-type/size checks.
+  If abuse becomes a problem, move uploads through a signed-URL flow that's
+  scoped to the requesting artist's session instead.
+- **Payment verification needs a real gateway before launch.** The
+  `/api/payments/verify` route currently activates a plan as soon as it's
+  called by an authenticated artist — there's no actual charge, and no
+  signature/webhook verification against a payment gateway (Razorpay,
+  Stripe, etc.). Wire up real gateway verification (or webhook-based
+  confirmation) before accepting real payments in production.
 
 ## Design notes
 
