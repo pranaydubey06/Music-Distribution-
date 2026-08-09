@@ -342,12 +342,14 @@ launch publicly:
   API, bypassing the app entirely and the app's own file-type/size checks.
   If abuse becomes a problem, move uploads through a signed-URL flow that's
   scoped to the requesting artist's session instead.
-- **Payment verification needs a real gateway before launch.** The
-  `/api/payments/verify` route currently activates a plan as soon as it's
-  called by an authenticated artist — there's no actual charge, and no
-  signature/webhook verification against a payment gateway (Razorpay,
-  Stripe, etc.). Wire up real gateway verification (or webhook-based
-  confirmation) before accepting real payments in production.
+- **Buying a plan is a manual, human-verified process, not an automated
+  checkout.** Tapping "Buy Now" on the Pricing page opens a Telegram chat
+  (configurable from the admin Settings tab) with the plan and the artist's
+  UID pre-filled. The artist pays there directly with the admin, and the
+  admin unlocks their upload access from the Artists tab once payment is
+  confirmed. There's no payment gateway integration and no API route that
+  can activate a plan on its own — the only way access changes is an admin
+  explicitly setting it.
 
 ## Design notes
 
