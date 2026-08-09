@@ -36,6 +36,7 @@ function buildTelegramBuyLink(telegramUsername: string, plan: PricingPlan, artis
 export default function PricingPage() {
   const router = useRouter()
   const [sessionArtist, setSessionArtist] = useState<Artist | null>(null)
+  const [isSessionLoading, setIsSessionLoading] = useState(true)
   const [accessState, setAccessState] = useState<UploadAccessState | null>(null)
   const [telegramUsername, setTelegramUsername] = useState(DEFAULT_TELEGRAM_USERNAME)
 
@@ -97,6 +98,8 @@ export default function PricingPage() {
         }
       } catch (err) {
         console.error('Session error on pricing page:', err)
+      } finally {
+        if (active) setIsSessionLoading(false)
       }
     }
     loadUserSession()
@@ -125,20 +128,26 @@ export default function PricingPage() {
       {/* Header Bar */}
       <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b-[3px] border-ink bg-white px-6 md:px-12">
         <div className="flex items-center gap-4">
-          <Link
-            href={sessionArtist ? '/dashboard' : '/'}
-            className="brutal-press flex items-center gap-1 text-xs font-bold uppercase text-ink-soft hover:text-ink"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            {sessionArtist ? 'Back to Dashboard' : 'Home'}
-          </Link>
+          {isSessionLoading ? (
+            <div className="h-4 w-24 animate-pulse rounded bg-ink/10" />
+          ) : (
+            <Link
+              href={sessionArtist ? '/dashboard' : '/'}
+              className="brutal-press flex items-center gap-1 text-xs font-bold uppercase text-ink-soft hover:text-ink"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {sessionArtist ? 'Back to Dashboard' : 'Home'}
+            </Link>
+          )}
           <div className="h-5 w-[2px] bg-ink/20" />
           <Logo />
           <EqualizerAnimation className="hidden sm:flex" />
         </div>
 
         <div className="flex items-center gap-3">
-          {sessionArtist ? (
+          {isSessionLoading ? (
+            <div className="h-8 w-24 animate-pulse rounded-md bg-ink/10" />
+          ) : sessionArtist ? (
             <Link href="/dashboard">
               <Button type="button" variant="secondary" size="sm">
                 Dashboard
